@@ -1,6 +1,6 @@
-
 import sys
 import pyttsx3
+from random import randint
 
 engine = pyttsx3.init()
 engine.setProperty('rate', 180)
@@ -20,3 +20,31 @@ def offBot():
 def passive():
     '''Функция заглушка при простом диалоге с ботом'''
     pass
+
+
+prev = None
+
+def readJoke():
+    '''🤡 Капи смешно веселит 🤡'''
+    global prev
+    with open('Superfunny_Jokes.txt', 'r', encoding='utf-8') as f:
+        count = f.readline().rstrip("\n")
+        if str.isdigit(count) == False:
+            return "АШИБКА В ФОРМИРОВАНИИ ФАЙЛА ШУТОК"
+        num = randint(1, int(count))
+        if prev == num:
+            if num == int(count):
+                num = 1
+            else:
+                num += 1
+        prev = num
+        line = None;
+        for i in range(num):
+            line = f.readline()
+        return line
+
+
+#def readFile(path):
+#    with open(path, 'r') as f:
+#        for line in f:
+#            speaker(line.strip())
