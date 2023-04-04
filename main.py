@@ -43,6 +43,10 @@ def recognize(data, vectorizer, clf):
 
     if phrase == 'XD':
         SubThread.speaker_start(readJoke())
+    elif phrase == 'время':
+        SubThread.speaker_start(getTime())
+    elif phrase == 'дата':
+        SubThread.speaker_start(getDate())
     else:
         SubThread.speaker_start(phrase) # answer.replace(func_name, '')
         if func_name == 'offBot':
@@ -247,7 +251,7 @@ class Visual:
 
         long_text = "Обращение:\nКапи или капибара\n\n" + "Фразы для разговора:\n- хочу спать\n" + "- не могу заснуть\n- как дела\n- что делать\n"
         long_text += "- скажи, как будет\nпривет на английском\n- пока\n\n"
-        long_text += "Команды:\n- отключись\n- развесели"
+        long_text += "Команды:\n- отключись\n- развесели\n- скажи время\n- скажи дату"
 
         Visual.commands_text.insert(END, long_text)
         Visual.commands_text.configure(state='disabled')
