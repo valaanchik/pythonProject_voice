@@ -1,4 +1,4 @@
-from calendar import month
+import os
 import sys
 import pyttsx3
 import time
@@ -18,6 +18,9 @@ def offBot():
     '''Отключает бота'''
     sys.exit()
 
+def empty():
+    '''Функция заглушка отсутствии команды'''
+    pass
 
 def passive():
     '''Функция заглушка при простом диалоге с ботом'''
@@ -29,6 +32,9 @@ prev = None
 def readJoke():
     '''🤡 Капи смешно веселит 🤡'''
     global prev
+    if not os.path.isfile('Superfunny_Jokes.txt'):
+            print(f'Файл \"Superfunny_Jokes.txt\" отсутствует')
+            return
     with open('Superfunny_Jokes.txt', 'r', encoding='utf-8') as f:
         count = f.readline().rstrip("\n")
         if str.isdigit(count) == False:
@@ -49,9 +55,19 @@ def readJoke():
 
 def getTime():
     '''⌚ Получение текущего системного времени ⌚'''
+
+    decades = {
+
+        2:'двадцать',
+        3:'тридцать',
+        4:'сорок',
+        5:'пятьдесят',
+
+    }
+
     s = time.strftime('%H %M').split(' ')
 
-    #s = '23 59' # ТЕСТ, УБРАТЬ!!!
+    #s = '01 51' # ТЕСТ, УБРАТЬ!!!
     #s = s.split(' ') # ТЕСТ, УБРАТЬ!!!
 
     h = int(s[0])
@@ -68,18 +84,34 @@ def getTime():
             res += ' часов '
     else:
         res += ' часов '
+    
 
-    if m == 1:
-        res += '0 одна'
-    elif m == 2:
-        res += '0 две'
-    else :
+    whole = m // 10
+    rem = m % 10
+
+    if m > 9 and m < 20:
         res += s[1]
+    elif m < 10 :
+        if rem == 1:
+            res += '0 одна'
+        elif rem == 2:
+            res += '0 две'
+        else:
+            res += s[1]
+    else:
+        if rem == 1:
+            res += decades[whole]
+            res += ' одна'
+        elif rem == 2:
+            res += decades[whole]
+            res += ' две'
+        else:
+            res += s[1]
 
     if m < 10 or m > 19:
-        if m % 10 == 1:
+        if rem == 1:
             res += ' минута'
-        elif m % 10 > 1 and m % 10 < 5:
+        elif rem > 1 and rem < 5:
             res += ' минуты'
         else:
             res += ' минут'
@@ -209,7 +241,7 @@ def getDate():
     s = time.strftime('%d %m %Y')
     s = s.split(' ')
 
-    #s = '16 05 1950' # ТЕСТ, УБРАТЬ!!!
+    #s = '01 01 2019' # ТЕСТ, УБРАТЬ!!!
     #s = s.split(' ') # ТЕСТ, УБРАТЬ!!!
 
     if int(s[0]) < 20 or int(s[0][1]) == 0:
@@ -265,8 +297,3 @@ def getDate():
     y += ' года'
 
     return d + m + y
-
-#def readFile(path):
-#    with open(path, 'r') as f:
-#        for line in f:
-#            speaker(line.strip())

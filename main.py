@@ -6,6 +6,10 @@ from func_v import *
 import json
 import queue
 import word
+
+import os
+import webbrowser
+#import re
 from threading import *
 
 q = queue.Queue()
@@ -21,6 +25,20 @@ clf = LogisticRegression()
 clf.fit(vectors, list(word.data_set.values()))
 
 
+browser_path = None
+
+def register_browser_path():
+    if not os.path.isfile('Browser_path.txt'):
+        print('Файл \"Browser_path.txt\" отсутствует')
+        return
+    global browser_path
+    with open('Browser_path.txt', 'r', encoding='utf-8') as f:
+        path = f.readline().rstrip("\n")
+        if os.path.isfile(path):
+            browser_path = path
+            webbrowser.register('browser', None ,webbrowser.BackgroundBrowser(browser_path))
+
+
 def callback(indata, frames, time, status):
     q.put(bytes(indata))
 
@@ -29,19 +47,23 @@ def recognize(data, vectorizer, clf):
 
     trg = word.TRIGGERS.intersection(data.split())
     if not trg:
-        return
+        return 0
 
     data.replace(list(trg)[0], '')
     text_vector = vectorizer.transform([data]).toarray()[0]
     answer = clf.predict([text_vector])[0]
 
-    print(answer)
+    #print(answer) // при распозновании консоль иногда виснет, и надо на неё тыкать, чтоб Капи продолжил разговаривать
     
     buf = answer.split(' ', 1)
     func_name = buf[0]
     phrase = buf[1]
 
-    if phrase == 'XD':
+    if phrase == 'яндекс':
+        return 1
+    elif phrase == 'ютуб':
+        return 2
+    elif phrase == 'XD':
         SubThread.speaker_start(readJoke())
     elif phrase == 'время':
         SubThread.speaker_start(getTime())
@@ -50,9 +72,11 @@ def recognize(data, vectorizer, clf):
     else:
         SubThread.speaker_start(phrase) # answer.replace(func_name, '')
         if func_name == 'offBot':
+            Visual.Closing = True
             while SubThread.isSayProcessing: Visual.window.update()
             Visual.window.destroy()
         exec(func_name + '()')
+    return 0
 
 
 def start():
@@ -72,8 +96,24 @@ def start():
             data = q.get()
             if rec.AcceptWaveform(data):
                 data =  json.loads(rec.Result())['text']
-                recognize(data, vectorizer, clf)
-
+                #print(data) #для проверки распознавания
+                result = recognize(data, vectorizer, clf)
+                if result != 0:
+                    global browser_path
+                    SubThread.speaker_start('угу')
+                    data = ''
+                    while Visual.isRunned and (data == '' or SubThread.isSayProcessing):
+                        buf = q.get()
+                        if rec.AcceptWaveform(buf):
+                            data = json.loads(rec.Result())['text']
+                    if not Visual.isRunned:
+                        SubThread.speaker_start("урА канИкулы")
+                        return
+                    if result == 1:
+                        webbrowser.get('browser').open_new_tab('https://yandex.ru/search/?text=' + data)
+                    elif result == 2:
+                        webbrowser.get('browser').open_new_tab('https://www.youtube.com/results?search_query=' + data)
+                   
             #Visual.window.update()
 
 
@@ -81,6 +121,9 @@ def read_file(path):
     if not (Visual.isRunned or SubThread.isRecognizeProcessing or SubThread.isSayProcessing) :
         #if SubThread.isReadingFile :
         #    return
+        if not os.path.isfile(path):
+            print(f'Файл \"{path}\" отсутствует')
+            return
         with open(path, 'r', encoding='utf-8') as f:
             a = f.readlines()
             l = len(a)
@@ -105,13 +148,12 @@ class SubThread :
     isRecognizeProcessing = False
     isReadingFile = False
 
-    # flag = True, если вызывается функция озвучки, flag = False, если вызывается функция распознавания
+    
     @staticmethod 
     def schedule_check(t, flag):
         Visual.window.after(1000, SubThread.check_if_done, t, flag)
 
 
-    # flag = True, если вызывается функция озвучки, flag = False, если вызывается функция распознавания
     @staticmethod 
     def check_if_done(t, flag):
         if not t.is_alive():
@@ -187,6 +229,7 @@ class Visual:
     
     isCommandsActive = False
     isRunned = False
+    Closing = False
 
     @staticmethod
     def Init() :
@@ -249,9 +292,8 @@ class Visual:
                                         width=(SCREEN_WIDTH-CENTRE_FRAME_WIDTH) // 2, fg="lemon chiffon", bg="purple2")
         
 
-        long_text = "Обращение:\nКапи или капибара\n\n" + "Фразы для разговора:\n- хочу спать\n" + "- не могу заснуть\n- как дела\n- что делать\n"
-        long_text += "- скажи, как будет\nпривет на английском\n- пока\n\n"
-        long_text += "Команды:\n- отключись\n- развесели\n- скажи время\n- скажи дату"
+        long_text = "Обращение:\nКапи\n\n" + "Фразы для разговора:\n- хочу спать\n" + "- не могу заснуть\n- как дела?\n- что делать?\n- пока\n\n"
+        long_text += "Команды:\n- скажи привет на\nанглийском\n- развесели\n- скажи время\n- скажи дату\n- запрос яндекс\n- запрос ютуб\n- отключись"
 
         Visual.commands_text.insert(END, long_text)
         Visual.commands_text.configure(state='disabled')
@@ -282,10 +324,11 @@ class Visual:
     
     @staticmethod 
     def on_close():
-        if messagebox.askokcancel('Выход', 'Действительно хотите закрыть окно?'):
-            Visual.isRunned = False
-            Visual.window.destroy()
-            offBot()
+        if not Visual.Closing:
+            if messagebox.askokcancel('Выход', 'Действительно хотите закрыть окно?'):
+                Visual.isRunned = False
+                Visual.window.destroy()
+                offBot()
 
     @staticmethod 
     def click_centre_button():
@@ -343,6 +386,11 @@ class Visual:
 
 
 def main():
+    global browser_path
+    register_browser_path()
+    if browser_path == None:
+        print('Путь к браузеру указан неверно')
+        return
     Visual.Init()
     SubThread.speaker_start('Голосовой помощник Капи запущен')
     Visual.window.mainloop()

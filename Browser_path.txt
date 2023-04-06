@@ -1,0 +1,6 @@
+C:\\Users\\HP\\AppData\\Local\\Programs\\Opera\\launcher.exe
+C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe
+
+
+Прописываем путь к экзешнику своего браузера, используя две \ для перехода по каталогам
+Путь будет считан только из первой строки
