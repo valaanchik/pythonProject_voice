@@ -20,9 +20,13 @@ samplerate = int(sd.query_devices(device[0], 'input')['default_samplerate'])
 
 vectorizer = CountVectorizer()
 vectors = vectorizer.fit_transform(list(word.data_set.keys()))
-
 clf = LogisticRegression()
 clf.fit(vectors, list(word.data_set.values()))
+
+voenmeh_vectorizer = CountVectorizer()
+vectors = voenmeh_vectorizer.fit_transform(list(word.voenmeh_sections.keys()))
+voenmeh_clf = LogisticRegression()
+voenmeh_clf.fit(vectors, list(word.voenmeh_sections.values()))
 
 
 browser_path = None
@@ -39,11 +43,57 @@ def register_browser_path():
             webbrowser.register('browser', None ,webbrowser.BackgroundBrowser(browser_path))
 
 
+
+def sub_recognize(rec, vec, clf):
+    while Visual.isRunned:
+        data = q.get()
+        if rec.AcceptWaveform(data) and not SubThread.isSayProcessing:
+            data = json.loads(rec.Result())['text']
+            if not data == '':
+                data = recognize(data, vec, clf, True)
+                return data
+            
+
+def voice_request(rec) :
+    data = ''
+    #if not cont:
+    while Visual.isRunned and (data == '' or SubThread.isSayProcessing):
+        buf = q.get()
+        if rec.AcceptWaveform(buf):
+            data = json.loads(rec.Result())['text']
+    #else :
+    #    if isinstance(cont, dict):
+    #        while Visual.isRunned and (not data in cont or SubThread.isSayProcessing):
+    #            buf = q.get()
+    #            if rec.AcceptWaveform(buf):
+    #                data = json.loads(rec.Result())['text']
+    #                print(data)
+    #        if not Visual.isRunned:
+    #            return ''
+    #        data = cont[data]
+
+        #elif isinstance(cont, list):
+        #    while Visual.isRunned and (not data in cont or SubThread.isSayProcessing):
+        #        buf = q.get()
+        #        if rec.AcceptWaveform(buf):
+        #            data = json.loads(rec.Result())['text']
+        #    if not Visual.isRunned:
+        #        return ''
+        #    data = cont[data]
+    return data
+
+
+
 def callback(indata, frames, time, status):
     q.put(bytes(indata))
 
 
-def recognize(data, vectorizer, clf):
+def recognize(data, vectorizer, clf, flag=False):
+
+    if flag:
+        text_vector = vectorizer.transform([data]).toarray()[0]
+        answer = clf.predict([text_vector])[0]
+        return answer
 
     trg = word.TRIGGERS.intersection(data.split())
     if not trg:
@@ -54,15 +104,17 @@ def recognize(data, vectorizer, clf):
     answer = clf.predict([text_vector])[0]
 
     #print(answer) // при распозновании консоль иногда виснет, и надо на неё тыкать, чтоб Капи продолжил разговаривать
-    
+
     buf = answer.split(' ', 1)
     func_name = buf[0]
     phrase = buf[1]
 
-    if phrase == 'яндекс':
+    if phrase == 'военмех':
         return 1
-    elif phrase == 'ютуб':
+    elif phrase == 'яндекс':
         return 2
+    elif phrase == 'ютуб':
+        return 3
     elif phrase == 'XD':
         SubThread.speaker_start(readJoke())
     elif phrase == 'время':
@@ -77,7 +129,6 @@ def recognize(data, vectorizer, clf):
             Visual.window.destroy()
         exec(func_name + '()')
     return 0
-
 
 def start():
     #del word.data_set
@@ -98,29 +149,31 @@ def start():
                 data =  json.loads(rec.Result())['text']
                 #print(data) #для проверки распознавания
                 result = recognize(data, vectorizer, clf)
+
                 if result != 0:
-                    global browser_path
-                    SubThread.speaker_start('угу')
-                    data = ''
-                    while Visual.isRunned and (data == '' or SubThread.isSayProcessing):
-                        buf = q.get()
-                        if rec.AcceptWaveform(buf):
-                            data = json.loads(rec.Result())['text']
-                    if not Visual.isRunned:
-                        SubThread.speaker_start("урА канИкулы")
-                        return
                     if result == 1:
-                        webbrowser.get('browser').open_new_tab('https://yandex.ru/search/?text=' + data)
-                    elif result == 2:
-                        webbrowser.get('browser').open_new_tab('https://www.youtube.com/results?search_query=' + data)
-                   
+                        SubThread.speaker_start('какой раздел?')
+                        data = sub_recognize(rec, voenmeh_vectorizer, voenmeh_clf)
+                        if not Visual.isRunned:
+                            SubThread.speaker_start("урА канИкулы")
+                            return
+                        webbrowser.get('browser').open_new_tab('https://www.voenmeh.ru' + data)  
+                    else:
+                        SubThread.speaker_start('угу')
+                        data = voice_request(rec)
+                        if not Visual.isRunned:
+                            SubThread.speaker_start("урА канИкулы")
+                            return
+                        if result == 2:
+                            webbrowser.get('browser').open_new_tab('https://yandex.ru/search/?text=' + data)
+                        elif result == 3:
+                            webbrowser.get('browser').open_new_tab('https://www.youtube.com/results?search_query=' + data)
+                           
             #Visual.window.update()
 
 
 def read_file(path):
     if not (Visual.isRunned or SubThread.isRecognizeProcessing or SubThread.isSayProcessing) :
-        #if SubThread.isReadingFile :
-        #    return
         if not os.path.isfile(path):
             print(f'Файл \"{path}\" отсутствует')
             return
@@ -128,18 +181,11 @@ def read_file(path):
             a = f.readlines()
             l = len(a)
             i = 0
-            #print("read file")
             SubThread.isSayProcessing = True
-            #SubThread.isReadingFile = True
             while i < l:
-                #print(1)
-                #if not SubThread.isSayProcessing:
-                
                 speaker(a[i])
                 i+=1
             SubThread.isSayProcessing = False
-                #Visual.window.update()
-            #SubThread.isReadingFile = False SubThread.speaker_start
                 
 
 class SubThread :
@@ -148,7 +194,6 @@ class SubThread :
     isRecognizeProcessing = False
     isReadingFile = False
 
-    
     @staticmethod 
     def schedule_check(t, flag):
         Visual.window.after(1000, SubThread.check_if_done, t, flag)
@@ -172,7 +217,6 @@ class SubThread :
             SubThread.isSayProcessing = True
             t = Thread(target=speaker, args=(text,), daemon=True)
             t.start()
-            # Начнем периодически проверять, закончился ли поток.
             SubThread.schedule_check(t, 0)
 
 
@@ -182,7 +226,6 @@ class SubThread :
             SubThread.isRecognizeProcessing = True
             t = Thread(target=start, daemon=True)
             t.start()
-            # Начнем периодически проверять, закончился ли поток.
             SubThread.schedule_check(t, 1)
 
 
@@ -192,7 +235,6 @@ class SubThread :
             SubThread.isReadingFile = True
             t = Thread(target=read_file, args=(path,), daemon=True)
             t.start()
-            # Начнем периодически проверять, закончился ли поток.
             SubThread.schedule_check(t, 2)
 
     
@@ -292,8 +334,9 @@ class Visual:
                                         width=(SCREEN_WIDTH-CENTRE_FRAME_WIDTH) // 2, fg="lemon chiffon", bg="purple2")
         
 
-        long_text = "Обращение:\nКапи\n\n" + "Фразы для разговора:\n- хочу спать\n" + "- не могу заснуть\n- как дела?\n- что делать?\n- пока\n\n"
-        long_text += "Команды:\n- скажи привет на\nанглийском\n- развесели\n- скажи время\n- скажи дату\n- запрос яндекс\n- запрос ютуб\n- отключись"
+        long_text = "Обращение:\nКапи\n\n" + "Фразы для разговора:\n- хочу спать\n" + "- не могу заснуть\n- как дела?\n- что делать?\n\n"
+        long_text += "Команды:\n- отключись\n- скажи привет на\nанглийском\n- развесели\n- скажи время\n- скажи дату\n- запрос яндекс\n- запрос ютуб\n- Военмех\n\n"
+        long_text += "Разделы команды Военмех:\n- главная\n- карта\n- факультеты и кафедры\n- расписание\n- контакты"
 
         Visual.commands_text.insert(END, long_text)
         Visual.commands_text.configure(state='disabled')
