@@ -18,20 +18,41 @@ def offBot():
     '''Отключает бота'''
     sys.exit()
 
+
 def empty():
     '''Функция заглушка отсутствии команды'''
     pass
+
 
 def passive():
     '''Функция заглушка при простом диалоге с ботом'''
     pass
 
 
-prev = None
+prev_song = None
+def play_music():
+    '''🎧 включение музыки 🎧'''
+    global prev_song
+    music_dir = 'music\\'
+    if not os.path.isdir(music_dir):
+        print('Указанный каталог отсутствует')
+        return
+    songs = os.listdir(music_dir)
+    d = len(songs)
+    num = randint(0, d-1)
+    if prev_song == num:
+        if num == d-1:
+            num = 0
+        else:
+            num += 1
+    prev_song = num
+    os.startfile(os.path.join(music_dir, songs[num]))
 
+
+prev_joke = None
 def readJoke():
     '''🤡 Капи смешно веселит 🤡'''
-    global prev
+    global prev_joke
     if not os.path.isfile('Superfunny_Jokes.txt'):
             print(f'Файл \"Superfunny_Jokes.txt\" отсутствует')
             return
@@ -41,12 +62,12 @@ def readJoke():
             return "АШИБКА В ФОРМИРОВАНИИ ФАЙЛА ШУТОК"
         d = int(count)
         num = randint(1, d)
-        if prev == num:
+        if prev_joke == num:
             if num == d:
                 num = 1
             else:
                 num += 1
-        prev = num
+        prev_joke = num
         line = None;
         for i in range(num):
             line = f.readline()

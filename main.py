@@ -2,14 +2,14 @@
 import vosk
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.linear_model import LogisticRegression
+
 from func_v import *
-import json
-import queue
 import word
 
+import json
+import queue
 import os
 import webbrowser
-#import re
 from threading import *
 
 q = queue.Queue()
@@ -125,8 +125,10 @@ def recognize(data, vectorizer, clf, flag=False):
         SubThread.speaker_start(phrase) # answer.replace(func_name, '')
         if func_name == 'offBot':
             Visual.Closing = True
-            while SubThread.isSayProcessing: Visual.window.update()
+        while SubThread.isSayProcessing: Visual.window.update()  
+        if func_name == 'offBot':
             Visual.window.destroy()
+        #while SubThread.isSayProcessing : continue
         exec(func_name + '()')
     return 0
 
@@ -159,7 +161,7 @@ def start():
                             return
                         webbrowser.get('browser').open_new_tab('https://www.voenmeh.ru' + data)  
                     else:
-                        SubThread.speaker_start('угу')
+                        SubThread.speaker_start('говорите')
                         data = voice_request(rec)
                         if not Visual.isRunned:
                             SubThread.speaker_start("урА канИкулы")
@@ -335,7 +337,7 @@ class Visual:
         
 
         long_text = "Обращение:\nКапи\n\n" + "Фразы для разговора:\n- хочу спать\n" + "- не могу заснуть\n- как дела?\n- что делать?\n\n"
-        long_text += "Команды:\n- отключись\n- скажи привет на\nанглийском\n- развесели\n- скажи время\n- скажи дату\n- запрос яндекс\n- запрос ютуб\n- Военмех\n\n"
+        long_text += "Команды:\n- отключись\n- скажи привет на\nанглийском\n- развесели\n- включи музыку\n- скажи время\n- скажи дату\n- запрос яндекс\n- запрос ютуб\n- Военмех\n\n"
         long_text += "Разделы команды Военмех:\n- главная\n- карта\n- факультеты и кафедры\n- расписание\n- контакты"
 
         Visual.commands_text.insert(END, long_text)
