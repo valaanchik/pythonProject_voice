@@ -1,17 +1,24 @@
+
 import os
 import sys
 import pyttsx3
 import time
+import webbrowser
 from random import randint
 
 engine = pyttsx3.init()
 engine.setProperty('rate', 180)
 
 
+
+
+
 def speaker(text):
 	'''Озвучка текста'''
 	engine.say(text)
 	engine.runAndWait()
+
+
 
 
 def offBot():
@@ -27,6 +34,7 @@ def empty():
 def passive():
     '''Функция заглушка при простом диалоге с ботом'''
     pass
+
 
 
 prev_song = None
@@ -56,10 +64,17 @@ def readJoke():
     if not os.path.isfile('Superfunny_Jokes.txt'):
             print(f'Файл \"Superfunny_Jokes.txt\" отсутствует')
             return
-    with open('Superfunny_Jokes.txt', 'r', encoding='utf-8') as f:
-        count = f.readline().rstrip("\n")
-        if str.isdigit(count) == False:
-            return "АШИБКА В ФОРМИРОВАНИИ ФАЙЛА ШУТОК"
+=======
+listweb = ['https://mail.voenmeh.ru/mail/','https://moodle.voenmeh.ru/login/index.php','https://ya.ru/']
+def browser(a):
+	'''Открывает браузер'''
+	webbrowser.open(listweb[a] , new=2)
+
+
+prev = None
+
+
+
         d = int(count)
         num = randint(1, d)
         if prev_joke == num:
@@ -68,6 +83,7 @@ def readJoke():
             else:
                 num += 1
         prev_joke = num
+
         line = None;
         for i in range(num):
             line = f.readline()
@@ -318,3 +334,4 @@ def getDate():
     y += ' года'
 
     return d + m + y
+
